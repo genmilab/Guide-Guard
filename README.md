@@ -10,7 +10,7 @@ alt="Typing SVG"
 style="margin-bottom:-10px; display:block;" />
 </a>
 
-[![ISBI 2027](https://img.shields.io/badge/IEEE_ISBI_2027-Submission-8C1B13?style=for-the-badge)](#-citation)
+[![ISBI 2027](https://img.shields.io/badge/IEEE_ISBI_2027-Under_Review-8C1B13?style=for-the-badge)](#-citation)
 [![Weights](https://img.shields.io/badge/HF-Weights-AECBFA?style=for-the-badge&logo=huggingface&logoColor=FFCC00&labelColor=grey)](https://huggingface.co/Atharva-Rege/guide-guard)
 [![Data](https://img.shields.io/badge/Data-BraTS_2023_GLI-1F6FEB?style=for-the-badge)](#️-data)
 [![nnU-Net v2](https://img.shields.io/badge/nnU--Net-v2.6.2-orange?style=for-the-badge)](https://github.com/MIC-DKFZ/nnUNet)
@@ -27,7 +27,7 @@ style="margin-bottom:-10px; display:block;" />
 
 ## 🔥 News
 - **[Oct 2026]** 🚀 Code, patient-level splits and checkpoints for Guide and Guard are released.
-- 📄 The paper is submitted to **IEEE ISBI 2027**.
+- 📄 The paper is under review at **IEEE ISBI 2027**.
 
 ## Overview
 Official code for **Guide and Guard**.
@@ -101,7 +101,7 @@ Held-out BraTS 2023 GLI test set (249 cases; burden: score *g*, α = 0.1), as re
 ## ⛏️ Installation
 
 ```bash
-git clone https://github.com/adinathdukre/Guide-Guard.git
+git clone https://github.com/genmilab/Guide-Guard.git
 cd Guide-Guard
 ```
 
@@ -345,9 +345,9 @@ If you find our paper and code useful in your research, please cite:
 @misc{rege2026guideguard,
   title  = {Guide and Guard: Prior-Guided Virtual-Contrast MRI Synthesis with Conformal Flags for Missed Enhancement},
   author = {Rege, Atharva Atul and Dukre, Adinath Madhavrao and Razzak, Imran},
-  note   = {Submitted to IEEE ISBI 2027},
+  note   = {Under review at IEEE ISBI 2027},
   year   = {2026},
-  url    = {https://github.com/adinathdukre/Guide-Guard}
+  url    = {https://github.com/genmilab/Guide-Guard}
 }
 ```
 
@@ -356,7 +356,7 @@ If you find our paper and code useful in your research, please cite:
 The code builds on [YODA](https://github.com/Deep-MI/YODA), [nnU-Net](https://github.com/MIC-DKFZ/nnUNet) and [nnUNet_translation](https://github.com/Phyrise/nnUNet_translation). We thank their authors for sharing their code. The models were trained on the BraTS 2023 GLI data; we thank the BraTS organisers and data contributors.
 
 ## 📨 Contact
-For questions or collaboration, please open an [issue](https://github.com/adinathdukre/Guide-Guard/issues) or reach out to [Adinath Madhavrao Dukre](https://github.com/adinathdukre).
+For questions or collaboration, please open an [issue](https://github.com/genmilab/Guide-Guard/issues) or reach out to [Adinath Madhavrao Dukre](https://github.com/adinathdukre).
 
 ## 📜 License
 
