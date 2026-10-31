@@ -53,7 +53,6 @@ Official code for **Guide and Guard**.
 - [🏋️ Training](#️-training)
 - [🧪 Tests](#-tests)
 - [🗂️ Repository Structure](#️-repository-structure)
-- [⚠️ Limitations](#️-limitations)
 - [📝 Citation](#-citation)
 - [📚 Acknowledgments](#-acknowledgments)
 - [📨 Contact](#-contact)
@@ -220,7 +219,7 @@ python scripts/guard.py evaluate --vol_root VOL --reader WORK/reader/guide --map
 Defaults follow the paper: α = 0.1, β = 0.2, δ = 0.1, ET-positive patients have ≥ 50 ET voxels, and false discoveries lie over 2 mm from the reference ET.
 
 > [!IMPORTANT]
-> The guarantee holds marginally, in expectation, for ET-positive test patients exchangeable with the calibration patients. See [Limitations](#️-limitations) before using Guard on a new cohort.
+> The guarantee holds marginally, in expectation, for ET-positive test patients exchangeable with the calibration patients. Recalibrate before using Guard on a new cohort.
 
 ## 🏋️ Training
 
@@ -328,14 +327,6 @@ Guide-Guard/
 ├── requirements.txt          # env `main`
 └── requirements-yoda.txt     # env `yoda`
 ```
-
-## ⚠️ Limitations
-
-- The guarantee holds marginally, in expectation, for ET-positive test patients exchangeable with the calibration patients; a single patient, or small lesions, can miss more.
-- It did not transfer across sites without recalibration. **Recalibrate at a new site.**
-- Guard does not detect out-of-scope cohorts (e.g. meningiomas).
-- Labels are algorithmic evidence categories, not diagnoses.
-- *S₂*, the second reader proxy used for the robustness check, and the retrained base synthesisers are not released.
 
 ## 📝 Citation
 
