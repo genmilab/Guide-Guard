@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Guide and Guard: Prior-Guided Virtual-Contrast MRI Synthesis with Conformal Flags for Missed Enhancement</title>
+<meta name="description" content="Official code for Guide and Guard." />
+<meta name="theme-color" content="#147b82" />
+<meta property="og:title" content="Guide and Guard: Prior-Guided Virtual-Contrast MRI Synthesis with Conformal Flags for Missed Enhancement" />
+<meta property="og:description" content="Official code for Guide and Guard." />
+<meta property="og:type" content="website" />
+<meta name="citation_title" content="Guide and Guard: Prior-Guided Virtual-Contrast MRI Synthesis with Conformal Flags for Missed Enhancement" />
+<link rel="icon" href="https://raw.githubusercontent.com/genmilab/VGS-Decoding/main/docs/assets/genmilab-logo.png" />
+<link rel="stylesheet" href="project.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<script defer src="project.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header"><div class="nav-wrap">
+<a class="brand" href="#top">Guide and Guard</a>
+<nav aria-label="Main navigation"><a href="#-method">Method</a><a href="#-results">Results</a><a href="#️-installation">Installation</a><a href="#-pretrained-weights">Weights</a><a href="#-inference">Inference</a><a href="#-citation">Citation</a></nav>
+<a class="nav-code" href="https://github.com/genmilab/Guide-Guard">GitHub <span aria-hidden="true">↗</span></a>
+</div></header>
+<main id="main">
+<section class="hero container" id="top" aria-labelledby="project-title">
+<a class="lab-identity" href="https://github.com/genmilab" aria-label="GenMI-Lab on GitHub">
+<img src="https://raw.githubusercontent.com/genmilab/VGS-Decoding/main/docs/assets/genmilab-logo.png" width="460" height="460" alt="GenMI-Lab logo" />
+<span><strong>GenMI-Lab</strong><span>MBZUAI</span></span></a>
+<p class="project-name">Guide and Guard</p>
+<h1 id="project-title">Guide and Guard: Prior-Guided Virtual-Contrast MRI Synthesis with Conformal Flags for Missed Enhancement</h1>
+<div class="authors" aria-label="Authors"><span>Atharva Atul Rege</span><span><a href="https://github.com/adinathdukre">Adinath Madhavrao Dukre</a></span><span>Imran Razzak</span></div>
+
+
+<p class="hero-description">Guide: synthesise T1c from non-contrast MRI.<br />Guard: flag the enhancement the image may miss.<br />Conformal control of the miss, for any synthesiser.</p>
+<div class="resource-links"><a class="button button-primary" href="https://github.com/genmilab/Guide-Guard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 7-5 5 5 5m8-10 5 5-5 5m-3-12-2 14"/></svg>Code</a><a class="button button-secondary" href="https://huggingface.co/Atharva-Rege/guide-guard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7l8-4 8 4v10l-8 4-8-4zM4 7l8 4 8-4M12 11v10"/></svg>Weights <span aria-hidden="true">↗</span></a><a class="button button-secondary" href="#-results">Results <span aria-hidden="true">↓</span></a><a class="button button-secondary" href="#-citation">Citation <span aria-hidden="true">↓</span></a></div>
+<div class="hero-meta"><span>IEEE ISBI 2027 Under Review</span></div>
+</section>
+<section class="section container narrow page-section" id="-news"><p class="section-kicker">01 / NEWS</p><h2>News</h2>
+<ul>
+<li><strong>[Oct 2026]</strong> 🚀 Code, patient-level splits and checkpoints for Guide and Guard are released.</li>
+<li>📄 The paper is under review at <strong>IEEE ISBI 2027</strong>.</li>
+</ul>
+</section>
+<section class="section container narrow page-section" id="overview"><p class="section-kicker">02 / OVERVIEW</p><h2>Overview</h2>
+<p>Official code for <strong>Guide and Guard</strong>.</p>
+<ul>
+<li><strong>Guide</strong> synthesises post-contrast T1 (T1c) from non-contrast (NC) brain MRI (T1n, T2w, FLAIR). Out-of-fold lesion maps from an NC segmenter <em>h</em> are fed as extra input channels to two regression synthesisers, and Guide's image is their mean.</li>
+<li><strong>Guard</strong> attaches a three-level map (<strong>Supported / Check / Unlikely</strong>) to the T1c of <em>any</em> synthesiser. Conformal risk control bounds the expected fraction of enhancing tumour (ET) that the image neither shows nor flags (the <em>miss</em>), and Learn-then-Test controls false discoveries in the Supported level.</li>
+</ul>
+<p align="center">
+<img src="https://raw.githubusercontent.com/genmilab/Guide-Guard/main/docs/assets/fig1_method.png" alt="Guide and Guard overview" width="100%"/>
+<br/>
+<em><b>Fig. 1.</b> Guide and Guard on the held-out patient of median ET volume. <b>Guide:</b> NC lesion maps m = h(x, c) enter a 2.5D and a 3D regressor, whose mean is ŷ. <b>Guard</b>, for any synthesiser: S, given ŷ in place of the acquired T1c, marks the ET that ŷ shows (Ê); an NC score s (g, or the exploratory (g + m<sub>ET</sub>)/2, dashed) ranks where ET may be missing; CRC/LTT thresholds from separate calibration patients label each voxel. Labels are algorithmic evidence categories, not diagnoses.</em>
+</p>
+</section>
+<section class="section container narrow page-section" id="-method"><p class="section-kicker">03 / METHOD</p><h2>Method</h2>
+<ol>
+<li><strong>Lesion prior.</strong> An NC segmenter <em>h</em> (nnU-Net 2D, 5 folds) predicts lesion maps m = WT / TC / ET. Training cases receive their out-of-fold maps, so the synthesisers never see a prior fitted to their own target.</li>
+<li><strong>Guide.</strong> The maps are added as input channels to two regression synthesisers: a 2.5D YODA regressor and a 3D nnU-Net with L1 loss (two runs). Guide's image is the mean of the 2.5D member and the averaged 3D runs, with left–right flip test-time augmentation. <strong>Guide-fast</strong> uses the 2.5D member only, without test-time augmentation and with h's fold 0 only.</li>
+<li><strong>Guard.</strong> Conformal risk control (CRC) on an NC-only ET score bounds the expected miss. ET that the reader proxy <em>S</em> finds on the image counts as covered, so the bound holds for any synthesiser. Learn-then-Test (LTT) controls false discoveries in the Supported level.</li>
+<li><strong>Review burden.</strong> Guard's cost is the non-ET volume marked Supported or Check. The same score calibrated without an image (<strong>NC-only CRC</strong>) gives the burden without any image, so the difference measures what the image adds.</li>
+</ol>
+<p>Four segmentation networks are used, all nnU-Nets trained on our training split and then frozen:</p>
+<div class="table-scroll" tabindex="0"><table class="paper-table">
+<thead>
+<tr>
+<th>Network</th>
+<th>Configuration</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>h</em></td>
+<td>2D, 5 folds</td>
+<td>NC lesion maps m = WT / TC / ET (Guide's prior)</td>
+</tr>
+<tr>
+<td><em>g</em></td>
+<td>3D full resolution</td>
+<td>NC ET score (Guard's primary score)</td>
+</tr>
+<tr>
+<td><em>S</em></td>
+<td>3D full resolution, all four sequences</td>
+<td>reader proxy that marks the ET an image shows</td>
+</tr>
+<tr>
+<td><em>S₂</em></td>
+<td></td>
+<td>robustness check in the paper only; <strong>not released</strong></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="section container narrow page-section" id="-results"><p class="section-kicker">04 / RESULTS</p><h2>Results</h2>
+<p>Held-out BraTS 2023 GLI test set (249 cases; burden: score <em>g</em>, α = 0.1), as reported in the paper:</p>
+<div align="center">
+<div class="table-scroll" tabindex="0"><table class="paper-table">
+<thead>
+<tr>
+<th>Method</th>
+<th style="text-align: center;">PSNR ↑</th>
+<th style="text-align: center;">SSIM ↑</th>
+<th style="text-align: center;">ET Dice (by S) ↑</th>
+<th style="text-align: center;">Review burden ↓</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Guide</strong></td>
+<td style="text-align: center;"><strong>23.71 dB</strong></td>
+<td style="text-align: center;"><strong>0.766</strong></td>
+<td style="text-align: center;">0.629</td>
+<td style="text-align: center;">27.6 mL</td>
+</tr>
+<tr>
+<td>Guide-fast</td>
+<td style="text-align: center;">23.61 dB</td>
+<td style="text-align: center;">0.765</td>
+<td style="text-align: center;">0.632</td>
+<td style="text-align: center;">26.3 mL</td>
+</tr>
+<tr>
+<td>NC-only CRC (no image)</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">0.646 (of <em>g</em>)</td>
+<td style="text-align: center;">30.7 mL</td>
+</tr>
+<tr>
+<td>Real T1c (reference)</td>
+<td style="text-align: center;">∞</td>
+<td style="text-align: center;">1.000</td>
+<td style="text-align: center;">0.871</td>
+<td style="text-align: center;">3.9 mL</td>
+</tr>
+</tbody>
+</table></div>
+</div>
+</section>
+<section class="section container narrow page-section" id="-qualitative-results"><p class="section-kicker">05 / QUALITATIVE RESULTS</p><h2>Qualitative Results</h2>
+<p align="center">
+<img src="https://raw.githubusercontent.com/genmilab/Guide-Guard/main/docs/assets/fig2_qualitative.png" alt="Qualitative results on held-out patients" width="100%"/>
+<br/>
+<em><b>Fig. 2.</b> Held-out patients, zoomed (rules fixed in advance): P1 at the 25th percentile of ET volume; P2 a failure case, most of whose small ET lesions are neither shown nor flagged (missed ET). Errors and Guard's maps (α = 0.1, score g).</em>
+</p>
+</section>
+<section class="section container narrow page-section" id="️-installation"><p class="section-kicker">06 / INSTALLATION</p><h2>Installation</h2>
+<pre><code class="language-bash">git clone https://github.com/genmilab/Guide-Guard.git
+cd Guide-Guard
+</code></pre>
+<p>Three Python environments are needed, because the two Guide members depend on different upstream code bases.</p>
+<div class="table-scroll" tabindex="0"><table class="paper-table">
+<thead>
+<tr>
+<th>Env</th>
+<th>Used for</th>
+<th>Install</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>main</code></td>
+<td>h, g, S, fusion, Guard</td>
+<td><code>pip install -r requirements.txt</code></td>
+</tr>
+<tr>
+<td><code>yoda</code></td>
+<td>the 2.5D member</td>
+<td><code>pip install -r requirements-yoda.txt</code>, plus a clone of <a href="https://github.com/Deep-MI/YODA">YODA</a> (commit <code>86e8dc8</code>), <code>export YODA_ROOT=/path/to/YODA</code></td>
+</tr>
+<tr>
+<td><code>nnt</code></td>
+<td>the 3D member</td>
+<td><code>pip install -e</code> of <a href="https://github.com/Phyrise/nnUNet_translation">nnUNet_translation</a> (commit <code>98f2406</code>), then <code>python scripts/install_trainer.py</code></td>
+</tr>
+</tbody>
+</table></div>
+<div class="callout callout-note"><strong>Note</strong><p><code>ema-pytorch</code> in <code>requirements-yoda.txt</code> is only needed for training.</p></div>
+</section>
+<section class="section container narrow page-section" id="-pretrained-weights"><p class="section-kicker">07 / PRETRAINED WEIGHTS</p><h2>Pretrained Weights</h2>
+<p>Download <code>guide-guard-checkpoints.zip</code> from <a href="https://huggingface.co/Atharva-Rege/guide-guard">Hugging Face</a> and unzip it:</p>
+<pre><code class="language-bash">huggingface-cli download Atharva-Rege/guide-guard guide-guard-checkpoints.zip --local-dir .
+unzip guide-guard-checkpoints.zip          # -&gt; guide-guard-checkpoints/, used as CKPT below
+cd guide-guard-checkpoints &amp;&amp; sha256sum -c MANIFEST.txt
+</code></pre>
+<div class="table-scroll" tabindex="0"><table class="paper-table">
+<thead>
+<tr>
+<th>Folder</th>
+<th>Network</th>
+<th>Checkpoint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>h/</code></td>
+<td>NC lesion prior <em>h</em> (nnU-Net 2d, folds 0–4)</td>
+<td><code>fold_k/checkpoint_final.pth</code></td>
+</tr>
+<tr>
+<td><code>g/</code></td>
+<td>NC ET score <em>g</em> (nnU-Net 3d_fullres, trained on all training cases: fold 5)</td>
+<td><code>fold_5/checkpoint_final.pth</code></td>
+</tr>
+<tr>
+<td><code>S/</code></td>
+<td>reader proxy <em>S</em> (nnU-Net 3d_fullres)</td>
+<td><code>fold_0/checkpoint_final.pth</code></td>
+</tr>
+<tr>
+<td><code>guide25d/</code></td>
+<td>Guide's 2.5D member (YODA regression + prior, EMA)</td>
+<td><code>guide25d.pt</code></td>
+</tr>
+<tr>
+<td><code>guide3d_r1/</code>, <code>guide3d_r2/</code></td>
+<td>Guide's 3D member, two runs (<code>nnUNetTrainerGuide3D</code>)</td>
+<td>chosen by <code>fold_0/selection.json</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="section container narrow page-section" id="️-data"><p class="section-kicker">08 / DATA</p><h2>Data</h2>
+<p>Inputs are BraTS-layout volumes: SRI24 space, 1 mm, 240 × 240 × 155, skull-stripped. Each case folder holds <code>&lt;case&gt;-{t1n,t2w,t2f}.nii.gz</code>, plus <code>t1c</code> and <code>seg</code> for training or evaluation.</p>
+<pre><code class="language-bash">python scripts/preprocess.py --raw_root /data/BraTS2023-GLI --out VOL     # add --no_target --no_seg for inference-only data
+</code></pre>
+<p>Preprocessing:
+- The brain mask is the union of the nonzero voxels of the NC inputs.
+- NC inputs are clipped to the brain [p0.5, p99.5]; T1c is clipped to the brain [p0.5, p99.9].
+- Both are rescaled to [0, 1].</p>
+<p><code>splits/</code> holds the patient-level split used in the paper (876 train / 126 val / 249 test cases) and the 5-fold CV of the training cases:</p>
+<pre><code class="language-text">splits/
+├── brats23gli_split_v1.csv          # case, patient, split (train / val / test)
+└── brats23gli_train_folds_v1.csv    # case, patient, fold (h's 5-fold CV over the training cases)
+</code></pre>
+</section>
+<section class="section container narrow page-section" id="-inference"><p class="section-kicker">09 / INFERENCE</p><h2>Inference</h2>
+<p>One command runs the full Guide pipeline (lesion maps, both members, fusion, reader proxy):</p>
+<pre><code class="language-bash">PY_MAIN=/envs/main/bin/python PY_YODA=/envs/yoda/bin/python PY_NNT=/envs/nnt/bin/python \
+  bash scripts/run_guide.sh VOL CKPT WORK [--fast] [--cases BraTS-GLI-00000-000 ...]
+</code></pre>
+<div class="table-scroll" tabindex="0"><table class="paper-table">
+<thead>
+<tr>
+<th>Output</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WORK/guide/&lt;case&gt;.npy</code></td>
+<td>Guide T1c (float16, [0, 1], 0 outside the brain)</td>
+</tr>
+<tr>
+<td><code>WORK/maps/{h,g}/&lt;case&gt;.npz</code></td>
+<td>NC lesion maps (WT, TC, ET) and the NC ET score g</td>
+</tr>
+<tr>
+<td><code>WORK/reader/guide/&lt;case&gt;.npz</code></td>
+<td>Segmenter S on the synthetic image</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>--fast</code> runs Guide-fast instead (2.5D member only, no test-time augmentation, h's fold 0 only). Its output goes to <code>WORK/guide_fast</code>.</p>
+<details>
+<summary><strong>Running the steps one at a time</strong></summary>
+<div class="table-scroll" tabindex="0"><table class="paper-table">
+<thead>
+<tr>
+<th>Step</th>
+<th>Script</th>
+<th>Env</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. NC lesion maps (h) and NC ET score (g)</td>
+<td><code>predict_maps.py</code></td>
+<td><code>main</code></td>
+</tr>
+<tr>
+<td>2. 2.5D member</td>
+<td><code>predict_guide25d.py</code></td>
+<td><code>yoda</code></td>
+</tr>
+<tr>
+<td>3. 3D member (each run)</td>
+<td><code>predict_guide3d.py</code></td>
+<td><code>nnt</code></td>
+</tr>
+<tr>
+<td>4. Average the 3D runs, then the two members</td>
+<td><code>fuse_guide.py</code></td>
+<td><code>main</code></td>
+</tr>
+<tr>
+<td>5. Reader proxy S on the fused image</td>
+<td><code>predict_reader.py</code></td>
+<td><code>main</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>See <code>scripts/run_guide.sh</code> for the exact arguments.</p>
+</details>
+<p><strong>Image evaluation.</strong> Image quality and the ET Dice of S, per case (brain PSNR, SSIM and MAE; ET PSNR; ET Dice with <code>--reader</code>). LPIPS and the lesion-wise Dice of Table 1 are not computed here.</p>
+<pre><code class="language-bash">python scripts/evaluate_images.py --vol_root VOL --images WORK/guide --reader WORK/reader/guide --out images_eval.csv
+</code></pre>
+</section>
+<section class="section container narrow page-section" id="️-guard"><p class="section-kicker">10 / GUARD</p><h2>Guard</h2>
+<p>Guard works with any synthesiser. For the images of that synthesiser:</p>
+<ol>
+<li>Run <code>predict_reader.py</code> on its images (and <code>predict_maps.py --models g</code>, plus <code>h</code> for the averaged score).</li>
+<li><strong>Calibrate</strong> on labelled patients who are not used for testing, one timepoint per patient.</li>
+<li><strong>Apply</strong> the calibrated thresholds, or <strong>evaluate</strong> them.</li>
+</ol>
+<pre><code class="language-bash">python scripts/guard.py calibrate --vol_root VOL --reader WORK/reader/guide --maps WORK/maps --cases cal.txt \
+    --alpha 0.1 --out thresholds.json
+python scripts/guard.py apply    --vol_root VOL --reader WORK/reader/guide --maps WORK/maps --cases test.txt \
+    --thresholds thresholds.json --out WORK/guard_maps          # uint8: 0 Unlikely, 1 Check, 2 Supported
+python scripts/guard.py evaluate --vol_root VOL --reader WORK/reader/guide --maps WORK/maps --cases test.txt \
+    --thresholds thresholds.json --out guard_eval.csv          # miss, review burden, Supported FDP
+</code></pre>
+<div class="table-scroll" tabindex="0"><table class="paper-table">
+<thead>
+<tr>
+<th>Option</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--score g</code> (default)</td>
+<td>NC ET score g, the paper's primary score</td>
+</tr>
+<tr>
+<td><code>--score avg</code></td>
+<td>averaged score s = (g + m_ET) / 2</td>
+</tr>
+<tr>
+<td><code>--no_image</code> (in place of <code>--reader</code>)</td>
+<td>NC-only CRC, the image-free baseline map; calibrate, apply and evaluate it the same way. Its burden minus the image's burden is what the image saves</td>
+</tr>
+<tr>
+<td><code>--variant voxel</code> (default) / <code>lesion</code> / <code>tail</code></td>
+<td>voxel-level, lesion-level or patient-tail miss loss</td>
+</tr>
+</tbody>
+</table></div>
+<p>Defaults follow the paper: α = 0.1, β = 0.2, δ = 0.1, ET-positive patients have ≥ 50 ET voxels, and false discoveries lie over 2 mm from the reference ET.</p>
+<div class="callout callout-important"><strong>Important</strong><p>The guarantee holds marginally, in expectation, for ET-positive test patients exchangeable with the calibration patients. Recalibrate before using Guard on a new cohort.</p></div>
+</section>
+<section class="section container narrow page-section" id="️-training"><p class="section-kicker">11 / TRAINING</p><h2>Training</h2>
+<p>The released checkpoints are enough for inference and for Guard. Retraining Guide needs the baseline synthesisers retrained on our split, which both members are fine-tuned from. These base weights are not in the Hugging Face repo; a folder <code>BASE</code> with them is assumed below:
+- <code>yoda.pt</code>: YODA in regression mode (20 input channels, 1 output, EMA weights);
+- <code>nnunet_l1.pth</code>: nnU-Net-L1 (nnUNet_translation <code>nnUNetTrainerMRCT_mae</code>, <code>nnResUNetPlans</code>).</p>
+<details open="open">
+<summary><strong>Step 1. h, g, S (nnU-Net v2, region-based WT/TC/ET)</strong></summary>
+<pre><code class="language-bash">python scripts/make_nnunet_datasets.py --vol_root VOL --split_csv splits/brats23gli_split_v1.csv \
+    --folds_csv splits/brats23gli_train_folds_v1.csv
+nnUNetv2_plan_and_preprocess -d 511 512
+python scripts/make_nnunet_datasets.py --vol_root VOL --split_csv splits/brats23gli_split_v1.csv \
+    --folds_csv splits/brats23gli_train_folds_v1.csv --splits_only
+
+for f in 0 1 2 3 4; do nnUNetv2_train 511 2d $f -tr nnUNetTrainer_250epochs --npz; done   # h
+nnUNetv2_train 511 3d_fullres 5 -tr nnUNetTrainer_250epochs                               # g
+nnUNetv2_train 512 3d_fullres 0 -tr nnUNetTrainer_250epochs                               # S
+</code></pre>
+<p>Then write the lesion maps. Training cases get their out-of-fold maps:</p>
+<pre><code class="language-bash">python scripts/predict_maps.py ... \
+    --from_cv $nnUNet_results/Dataset511_GuideNC/nnUNetTrainer_250epochs__nnUNetPlans__2d --folds_csv ...
+</code></pre>
+<p>All other cases get the 5-fold ensemble: <code>predict_maps.py --models h</code>.</p>
+</details>
+<details open="open">
+<summary><strong>Step 2. 2.5D member (from <code>BASE/yoda.pt</code>)</strong></summary>
+<pre><code class="language-bash">python scripts/train_guide25d.py --vol_root VOL --maps MAPS/h --split_csv splits/brats23gli_split_v1.csv \
+    --base_ckpt BASE/yoda.pt --out RUN
+python scripts/select_guide25d.py --run_dir RUN --vol_root VOL --maps MAPS/h --split_csv splits/brats23gli_split_v1.csv
+</code></pre>
+</details>
+<details open="open">
+<summary><strong>Step 3. 3D member (from <code>BASE/nnunet_l1.pth</code>)</strong></summary>
+<pre><code class="language-bash">python scripts/make_guide3d_dataset.py raw --vol_root VOL --maps MAPS/h --split_csv splits/brats23gli_split_v1.csv
+nnUNetv2_extract_fingerprint -d 622 &amp;&amp; nnUNetv2_plan_experiment -d 622 -pl nnUNetPlannerResUNet
+nnUNetv2_preprocess -d 622 -plans_name nnResUNetPlans -c 3d_fullres
+python scripts/make_guide3d_dataset.py splits --vol_root VOL --split_csv ...
+python scripts/make_guide3d_dataset.py inject --vol_root VOL --split_csv ...
+GUIDE3D_INIT=BASE/nnunet_l1.pth nnUNetv2_train 622 3d_fullres 0 -tr nnUNetTrainerGuide3D -p nnResUNetPlans
+python scripts/select_guide3d.py --model_dir RESULTS/... --vol_root VOL --maps MAPS/h --split_csv ...
+</code></pre>
+<p>The paper averages two independent runs of this step.</p>
+</details>
+<div class="table-scroll" tabindex="0"><table class="paper-table">
+<thead>
+<tr>
+<th>Setting</th>
+<th>2.5D member</th>
+<th>3D member</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initialisation</td>
+<td><code>BASE/yoda.pt</code></td>
+<td><code>BASE/nnunet_l1.pth</code></td>
+</tr>
+<tr>
+<td>Schedule</td>
+<td>25k steps, Adam, cosine 1e-4 → 1e-6</td>
+<td>400 epochs</td>
+</tr>
+<tr>
+<td>Loss</td>
+<td>MSE + auxiliary WT/TC/ET head (weight 0.005)</td>
+<td>L1 + 5 × MSE + auxiliary head (Dice + BCE)</td>
+</tr>
+<tr>
+<td>Prior dropout</td>
+<td>0.15</td>
+<td>0.15</td>
+</tr>
+<tr>
+<td>Augmentation</td>
+<td>left–right flips</td>
+<td>left–right flips</td>
+</tr>
+<tr>
+<td>Selection</td>
+<td>best validation brain PSNR (released: step 20k)</td>
+<td>best validation brain PSNR; snapshot and tile step in <code>selection.json</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="section container narrow page-section" id="-tests"><p class="section-kicker">12 / TESTS</p><h2>Tests</h2>
+<pre><code class="language-bash">pip install pytest &amp;&amp; python -m pytest -q tests
+</code></pre>
+<p><code>tests/test_guard.py</code> checks CRC miss control, the Guard map at λ = 0, the image-free threshold and member fusion.</p>
+</section>
+<section class="section container narrow page-section" id="️-repository-structure"><p class="section-kicker">13 / REPOSITORY STRUCTURE</p><h2>Repository Structure</h2>
+<pre><code class="language-text">Guide-Guard/
+├── guideguard/
+│   ├── volumes.py            # BraTS I/O, brain mask, intensity normalisation
+│   ├── guide25d.py           # 2.5D member (YODA regression + prior)
+│   ├── guide3d.py            # 3D member data and inference helpers
+│   ├── fuse.py               # weighted, brain-masked member fusion
+│   ├── guard.py              # CRC / LTT calibration, Guard maps, miss and burden
+│   ├── metrics.py            # PSNR, SSIM, MAE, Dice
+│   ├── nnunet_helpers.py     # nnU-Net dataset and prediction utilities
+│   └── nnunet_ext/           # nnUNetTrainerGuide3D (installed by scripts/install_trainer.py)
+├── scripts/
+│   ├── run_guide.sh          # end-to-end Guide inference
+│   ├── preprocess.py         # raw BraTS -&gt; normalised volumes
+│   ├── predict_*.py          # h/g maps, 2.5D and 3D members, reader proxy S
+│   ├── fuse_guide.py         # member fusion
+│   ├── guard.py              # calibrate / apply / evaluate
+│   ├── evaluate_images.py    # per-case image metrics
+│   ├── make_*_dataset*.py    # nnU-Net dataset builders
+│   ├── train_guide25d.py, select_guide25d.py, select_guide3d.py
+│   └── install_trainer.py
+├── splits/                   # patient-level split and 5-fold CV used in the paper
+├── tests/                    # Guard unit tests
+├── docs/assets/              # README figures (Fig. 1 method, Fig. 2 qualitative)
+├── requirements.txt          # env `main`
+└── requirements-yoda.txt     # env `yoda`
+</code></pre>
+</section>
+<section class="section container narrow page-section" id="-acknowledgments"><p class="section-kicker">14 / ACKNOWLEDGMENTS</p><h2>Acknowledgments</h2>
+<p>The code builds on <a href="https://github.com/Deep-MI/YODA">YODA</a>, <a href="https://github.com/MIC-DKFZ/nnUNet">nnU-Net</a> and <a href="https://github.com/Phyrise/nnUNet_translation">nnUNet_translation</a>. We thank their authors for sharing their code. The models were trained on the BraTS 2023 GLI data; we thank the BraTS organisers and data contributors.</p>
+</section>
+<section class="section container narrow page-section" id="-contact"><p class="section-kicker">15 / CONTACT</p><h2>Contact</h2>
+<p>For questions or collaboration, please open an <a href="https://github.com/genmilab/Guide-Guard/issues">issue</a> or reach out to <a href="https://github.com/adinathdukre">Adinath Madhavrao Dukre</a>.</p>
+</section>
+<section class="section container narrow page-section" id="-license"><p class="section-kicker">16 / LICENSE</p><h2>License</h2>
+<p>The code and model weights are released under Apache-2.0 (<a href="https://github.com/genmilab/Guide-Guard/tree/main/LICENSE">LICENSE</a>). YODA, nnU-Net and nnUNet_translation are also Apache-2.0. The models were trained on BraTS 2023 GLI (CC BY 4.0).</p>
+<div class="callout callout-important"><strong>Important</strong><p>Guide and Guard are intended for research only. They are not validated for clinical use and must not inform any diagnostic or treatment decision.</p></div>
+</section>
+<section class="section citation-section" id="-citation"><div class="container narrow"><p class="section-kicker">17 / CITATION</p><div class="citation-heading"><h2>Cite this work.</h2><button class="copy-button light-copy" data-copy="bibtex" type="button">Copy BibTeX</button></div><p>If you find our paper and code useful in your research, please cite:</p><pre class="bibtex"><code id="bibtex">@misc{rege2026guideguard,
+  title  = {Guide and Guard: Prior-Guided Virtual-Contrast MRI Synthesis with Conformal Flags for Missed Enhancement},
+  author = {Rege, Atharva Atul and Dukre, Adinath Madhavrao and Razzak, Imran},
+  note   = {Under review at IEEE ISBI 2027},
+  year   = {2026},
+  url    = {https://github.com/genmilab/Guide-Guard}
+}</code></pre></div></section>
+</main>
+<footer class="site-footer"><div class="container">
+<a class="lab-footer" href="https://github.com/genmilab" aria-label="GenMI-Lab on GitHub">
+<img src="https://raw.githubusercontent.com/genmilab/VGS-Decoding/main/docs/assets/genmilab-logo.png" width="460" height="460" loading="lazy" alt="GenMI-Lab logo" /><span>GenMI-Lab</span></a>
+<p>Research code</p>
+<div><a href="https://github.com/genmilab/Guide-Guard">Source code</a><a href="https://github.com/genmilab/Guide-Guard/blob/main/LICENSE">Code license</a></div>
+</div></footer>
+<div class="sr-only" id="copy-status" role="status" aria-live="polite"></div>
+</body>
+</html>
